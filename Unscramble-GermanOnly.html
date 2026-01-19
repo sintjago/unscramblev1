@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ordne den Satz</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    #toggle-section, #input-section, #game-section {
+      margin-top: 20px;
+      padding: 0 20px;
+    }
+
+    #toggle-section {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #input-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #sentence, #csv-sentences, #input-section button, #round-slider {
+      font-size: 16px;
+      height: 40px;
+      padding: 0 10px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    #csv-sentences {
+      width: 320px;
+    }
+
+    .hint-options label, .category-options label {
+      margin: 0 5px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button {
+      background-color: #f0f0f0;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      font-size: 16px;
+      height: 40px;
+      padding: 0 12px;
+    }
+
+    button:hover:enabled {
+      background-color: #e0e0e0;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .replay-button {
+      margin-left: 10px;
+    }
+
+    label {
+      font-size: 14px;
+    }
+
+    #scrambled-letters, #target-letters {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+      max-width: 90%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .letter, .drop-zone {
+      padding: 10px;
+      margin: 5px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .letter {
+      background-color: #f0f0f0;
+      border: 1px solid #ddd;
+    }
+
+    .drop-zone {
+      background-color: #d0e7ff;
+      border: 2px dashed #777;
+    }
+
+    .space {
+      width: 40px;
+      height: 40px;
+      margin: 5px;
+    }
+
+    .correct {
+      background-color: #a3f0a3;
+    }
+
+    .incorrect {
+      background-color: #f0a3a3;
+    }
+
+    #result, #mistake-count, #score, #timer, #round-info {
+      margin-top: 10px;
+    }
+
+    @media (max-width: 600px) {
+      .letter, .drop-zone, .space {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+        margin: 4px;
+      }
+
+      button, #sentence, #csv-sentences {
+        font-size: 14px;
+        height: auto;
+      }
+
+      .hint-options, .category-options {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<h1>Ordne den Satz</h1>
+
+<div id="toggle-section">
+  <label for="mode-toggle">Unendliche Buchstaben:</label>
+  <input type="checkbox" id="mode-toggle" onclick="toggleMode()">
+  <label for="speech-toggle">🔊 Ton:</label>
+  <input type="checkbox" id="speech-toggle" checked>
+  <label for="speech-rate">Geschwindigkeit:</label>
+  <select id="speech-rate">
+    <option value="0.5">0.5x</option>
+    <option value="0.75">0.75x</option>
+    <option value="1" selected>1x</option>
+    <option value="1.25">1.25x</option>
+    <option value="1.5">1.5x</option>
+  </select>
+</div>
+
+<div id="input-section">
+  <div class="row">
+    <input type="text" id="sentence" placeholder="Gib einen Satz ein">
+    <label><input type="checkbox" id="sample-checkbox"> Beispielsätze verwenden</label>
+    <button onclick="startGame()">Spiel starten</button>
+  </div>
+
+  <div class="row category-options">
+    <label><input type="checkbox" class="category" value="colors"> Farben</label>
+    <label><input type="checkbox" class="category" value="verbs"> Verben</label>
+    <label><input type="checkbox" class="category" value="animals"> Tiere</label>
+    <label><input type="checkbox" class="category" value="food"> Essen</label>
+    <label><input type="checkbox" class="category" value="classroom"> Klassenzimmer</label>
+  </div>
+
+  <div class="row hint-options">
+    <label>Hinweise pro Runde:</label>
+    <label><input type="radio" name="hint-count" value="0"> 0</label>
+    <label><input type="radio" name="hint-count" value="1"> 1</label>
+    <label><input type="radio" name="hint-count" value="3" checked> 3</label>
+    <label><input type="radio" name="hint-count" value="5"> 5</label>
+  </div>
+
+  <div class="row">
+    <input type="text" id="csv-sentences" placeholder="Mehrere Sätze laden (CSV)">
+    <button onclick="loadCSV()">Absenden & starten</button>
+  </div>
+
+  <div class="row">
+    <label for="round-slider">Runden:</label>
+    <input type="range" id="round-slider" min="1" max="10" value="1" style="width: 150px;">
+    <span id="round-value">1</span>
+  </div>
+</div>
+
+<div id="game-section" style="display:none;">
+  <h2>Bringe die Wörter in die richtige Reihenfolge!</h2>
+  <p id="round-info"></p>
+  <div id="scrambled-letters"></div>
+  <div id="target-letters"></div>
+  <div style="margin-top: 20px;">
+    <button onclick="checkAnswer()">Antwort prüfen</button>
+    <button onclick="restartGame()">Neustart</button>
+    <button class="replay-button" onclick="replaySentence()">Satz vorlesen</button>
+    <button id="hint-button" onclick="useHint()">Hinweis ×3</button>
+  </div>
+  <p id="result"></p>
+  <p id="mistake-count"></p>
+  <p id="score">Punktzahl: 1000</p>
+  <p id="timer">Zeit: 0s</p>
+  <div id="final-log"></div>
+</div>
+<script>
+  let currentSentence = "";
+  let sentenceList = [];
+  let currentRound = 0;
+  let totalRounds = 1;
+  let infiniteMode = false;
+  const language = 'de-DE';
+  let draggedTile = null;
+  let dragSource = null;
+  let selectedTile = null;
+  let startTime = 0;
+  let timerInterval;
+  let resultsLog = [];
+  let hintsLeft = 3;
+  const MAX_TIME = 180000;
+
+  const categories = {
+    colors: ["Rot", "Blau", "Grün", "Gelb", "Lila", "Orange", "Schwarz", "Weiß", "Rosa", "Grau"],
+    verbs: ["Lauf schnell", "Iss Pizza", "Schreib einen Brief", "Sprich klar", "Denk gut nach"],
+    animals: ["Die Katze springt", "Ein Hund bellt", "Löwen brüllen", "Vögel fliegen", "Fische schwimmen"],
+    food: ["Ich mag Äpfel", "Wir essen Reis", "Trink Wasser", "Back Brot", "Brate Eier"],
+    classroom: ["Öffne das Buch", "Schreibe deinen Namen", "Lies laut", "Setz dich", "Heb die Hand"]
+  };
+
+  const sampleSentences = [
+    "Die Sonne scheint",
+    "Ich mag Pizza",
+    "Wir lernen",
+    "Du hast es gefunden",
+    "Zeit zu laufen"
+  ];
+
+  const alphabets = {
+    "de-DE": "ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜẞ"
+  };
+
+  document.getElementById("round-slider").addEventListener("input", (e) => {
+    totalRounds = parseInt(e.target.value);
+    document.getElementById("round-value").textContent = totalRounds;
+  });
+
+  function getSelectedHintCount() {
+    const options = document.getElementsByName("hint-count");
+    for (const opt of options) {
+      if (opt.checked) return parseInt(opt.value);
+    }
+    return 3;
+  }
+
+  function toggleMode() {
+    infiniteMode = document.getElementById("mode-toggle").checked;
+  }
+
+  function getSelectedCategories() {
+    return Array.from(document.querySelectorAll(".category:checked"))
+      .map(cb => cb.value);
+  }
+
+  function getCategorySentences() {
+    const selected = getSelectedCategories();
+    let combined = [];
+    selected.forEach(cat => combined = combined.concat(categories[cat]));
+    return combined.sort(() => Math.random() - 0.5);
+  }
+
+  function loadCSV() {
+    const csv = document.getElementById("csv-sentences").value.trim();
+    if (!csv) return;
+    sentenceList = csv.split(",").map(s => s.trim()).filter(Boolean);
+    totalRounds = Math.min(sentenceList.length, totalRounds);
+    currentRound = 0;
+    resultsLog = [];
+    playRound();
+  }
+
+  function startGame() {
+    const useSample = document.getElementById("sample-checkbox").checked;
+    const categoryChoices = getSelectedCategories();
+    if (useSample) {
+      sentenceList = sampleSentences.slice();
+    } else if (categoryChoices.length > 0) {
+      sentenceList = getCategorySentences();
+    } else {
+      const input = document.getElementById("sentence").value.trim();
+      if (!input) {
+        alert("Bitte gib einen Satz ein, wähle eine Kategorie oder benutze die Beispielsätze.");
+        return;
+      }
+      sentenceList = [input];
+    }
+
+    sentenceList = sentenceList.slice(0, totalRounds);
+    currentRound = 0;
+    resultsLog = [];
+    playRound();
+  }
+
+  function playRound() {
+    currentSentence = sentenceList[currentRound];
+    hintsLeft = getSelectedHintCount();
+    document.getElementById("hint-button").disabled = hintsLeft === 0;
+    document.getElementById("hint-button").textContent = `Hinweis ×${hintsLeft}`;
+    initializeGame(currentSentence);
+    document.getElementById("round-info").textContent = `Runde ${currentRound + 1} von ${totalRounds}`;
+  }
+
+  function initializeGame(sentence) {
+    clearInterval(timerInterval);
+    document.getElementById("score").textContent = "Punktzahl: 1000";
+    document.getElementById("timer").textContent = "Zeit: 0s";
+    document.getElementById("final-log").innerHTML = "";
+    startTime = Date.now();
+    timerInterval = setInterval(updateTimer, 1000);
+
+    const scrambledContainer = document.getElementById("scrambled-letters");
+    const targetContainer = document.getElementById("target-letters");
+    scrambledContainer.innerHTML = "";
+    targetContainer.innerHTML = "";
+
+    const alphabet = alphabets["de-DE"];
+    if (infiniteMode) {
+      for (const letter of alphabet) {
+        createTile(letter.toLowerCase(), true);
+      }
+    } else {
+      const letters = sentence.split('').filter(c => c !== ' ');
+      const scrambledLetters = letters.sort(() => Math.random() - 0.5);
+      scrambledLetters.forEach(letter => createTile(letter, false));
+    }
+
+    sentence.split('').forEach(char => {
+      if (char === ' ') {
+        const space = document.createElement("div");
+        space.classList.add("space");
+        targetContainer.appendChild(space);
+      } else {
+        const dropZone = document.createElement("div");
+        dropZone.classList.add("drop-zone");
+        dropZone.addEventListener("dragover", e => e.preventDefault());
+        dropZone.addEventListener("drop", drop);
+        dropZone.addEventListener("click", () => {
+          if (selectedTile && dropZone.textContent === "") {
+            dropZone.textContent = selectedTile.textContent;
+            if (!infiniteMode) selectedTile.remove();
+            speakLetter(dropZone.textContent);
+            selectedTile = null;
+          }
+        });
+        dropZone.addEventListener("dblclick", () => {
+          const letter = dropZone.textContent;
+          if (letter) {
+            if (!infiniteMode) {
+              createTile(letter, false, true);
+            }
+            dropZone.textContent = "";
+          }
+        });
+        targetContainer.appendChild(dropZone);
+      }
+    });
+
+    document.getElementById("result").textContent = "";
+    document.getElementById("mistake-count").textContent = "";
+    document.getElementById("game-section").style.display = "block";
+  }
+
+  function createTile(letter, infinite = false, insertAtFront = false) {
+    const tile = document.createElement("div");
+    tile.classList.add("letter");
+    tile.draggable = true;
+    tile.textContent = letter;
+
+    tile.addEventListener("dragstart", event => {
+      draggedTile = infinite ? tile.cloneNode(true) : tile;
+      dragSource = tile.parentElement;
+      event.dataTransfer.setData("text/plain", letter);
+      setTimeout(() => tile.style.visibility = "hidden", 0);
+    });
+
+    tile.addEventListener("dragend", () => {
+      if (!infinite && tile) tile.style.visibility = "visible";
+      draggedTile = null;
+      dragSource = null;
+    });
+
+    tile.addEventListener("click", () => {
+      selectedTile = tile;
+    });
+
+    const container = document.getElementById("scrambled-letters");
+    if (insertAtFront && container.firstChild) {
+      container.insertBefore(tile, container.firstChild);
+    } else {
+      container.appendChild(tile);
+    }
+  }
+
+  function drop(event) {
+    event.preventDefault();
+    const dropZone = event.target;
+    if (dropZone.classList.contains("drop-zone") && dropZone.textContent === "") {
+      const letter = draggedTile.textContent;
+      dropZone.textContent = letter;
+      if (!infiniteMode && draggedTile && draggedTile.parentElement) {
+        draggedTile.remove();
+      }
+      speakLetter(letter);
+    }
+  }
+
+  function speakLetter(letter) {
+    if (!document.getElementById("speech-toggle").checked) return;
+    const utterance = new SpeechSynthesisUtterance(letter);
+    utterance.lang = language;
+    utterance.rate = parseFloat(document.getElementById("speech-rate").value);
+    window.speechSynthesis.cancel();
+    setTimeout(() => window.speechSynthesis.speak(utterance), 100);
+  }
+
+  function speakSentence(sentence) {
+    if (!document.getElementById("speech-toggle").checked) return;
+    const utterance = new SpeechSynthesisUtterance(sentence);
+    utterance.lang = language;
+    utterance.rate = parseFloat(document.getElementById("speech-rate").value);
+    window.speechSynthesis.cancel();
+    setTimeout(() => window.speechSynthesis.speak(utterance), 100);
+  }
+
+  function replaySentence() {
+    speakSentence(currentSentence);
+  }
+
+  function useHint() {
+    const zones = document.querySelectorAll(".drop-zone");
+    const letters = currentSentence.replace(/ /g, '').split('');
+    const pool = Array.from(document.querySelectorAll(".letter"));
+
+    for (let i = 0; i < zones.length; i++) {
+      if (zones[i].textContent === "" && letters[i]) {
+        let match = pool.find(tile => tile.textContent.toLowerCase() === letters[i].toLowerCase());
+        if (match) {
+          zones[i].textContent = match.textContent;
+          if (!infiniteMode) match.remove();
+          speakLetter(match.textContent);
+          break;
+        }
+      }
+    }
+
+    hintsLeft--;
+    document.getElementById("hint-button").textContent = `Hinweis ×${hintsLeft}`;
+    if (hintsLeft <= 0) {
+      document.getElementById("hint-button").disabled = true;
+    }
+  }
+
+  function checkAnswer() {
+    const targetZones = document.querySelectorAll(".drop-zone");
+    let constructed = "";
+    targetZones.forEach(zone => constructed += zone.textContent || ' ');
+    speakSentence(constructed.trim());
+    highlightAnswer(constructed);
+  }
+
+  function highlightAnswer(constructedSentence) {
+    const targetZones = document.querySelectorAll(".drop-zone");
+    const originalLetters = currentSentence.replace(/ /g, '').split('');
+    const constructedLetters = constructedSentence.replace(/ /g, '').split('');
+    let incorrectCount = 0;
+
+    targetZones.forEach((zone, index) => {
+      const correctLetter = originalLetters[index] || '';
+      const actualLetter = constructedLetters[index] || '';
+      if (actualLetter === correctLetter) {
+        zone.classList.add("correct");
+        zone.classList.remove("incorrect");
+      } else {
+        zone.classList.add("incorrect");
+        zone.classList.remove("correct");
+        incorrectCount++;
+      }
+    });
+
+    const normalized = constructedSentence.replace(/\s+/g, '').toLowerCase();
+    const expected = currentSentence.replace(/\s+/g, '').toLowerCase();
+
+    const resultMsg = normalized === expected
+      ? "Richtig!"
+      : (incorrectCount === 0 ? "Fast geschafft!" : "Versuche es erneut.");
+
+    document.getElementById("result").textContent = resultMsg;
+    document.getElementById("mistake-count").textContent = `Falsche Buchstaben: ${incorrectCount}`;
+
+    if (normalized === expected) {
+      clearInterval(timerInterval);
+      const elapsed = Date.now() - startTime;
+      const seconds = Math.floor(elapsed / 1000);
+      const score = Math.max(0, 1000 - Math.floor((elapsed / MAX_TIME) * 1000));
+
+      resultsLog.push({
+        round: currentRound + 1,
+        sentence: currentSentence,
+        score,
+        time: seconds
+      });
+
+      if (currentRound + 1 < totalRounds) {
+        currentRound++;
+        setTimeout(playRound, 1000);
+      } else {
+        setTimeout(showFinalSummary, 500);
+      }
+    }
+  }
+
+  function updateTimer() {
+    const elapsed = Date.now() - startTime;
+    const seconds = Math.floor(elapsed / 1000);
+    document.getElementById("timer").textContent = `Zeit: ${seconds}s`;
+    const score = Math.max(0, 1000 - Math.floor((elapsed / MAX_TIME) * 1000));
+    document.getElementById("score").textContent = `Punktzahl: ${score}`;
+  }
+
+  function showFinalSummary() {
+    let summary = "🎉 Endergebnis 🎉\n\n";
+    let total = 0;
+    resultsLog.forEach(res => {
+      summary += `Runde ${res.round}: „${res.sentence}“ — Punktzahl: ${res.score}, Zeit: ${res.time}s\n`;
+      total += res.score;
+    });
+    summary += `\nGesamtpunktzahl: ${total}`;
+    alert(summary);
+    createLogDownload(summary);
+  }
+
+  function createLogDownload(content) {
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const dlBtn = document.createElement("a");
+    dlBtn.href = url;
+    dlBtn.download = "satz_ergebnis.txt";
+    dlBtn.textContent = "Ergebnisse herunterladen";
+    dlBtn.style.display = "inline-block";
+    dlBtn.style.marginTop = "10px";
+    dlBtn.style.fontSize = "16px";
+    document.getElementById("final-log").appendChild(dlBtn);
+  }
+
+  function restartGame() {
+    resultsLog = [];
+    currentRound = 0;
+    playRound();
+  }
+</script>
+</body>
+</html>
